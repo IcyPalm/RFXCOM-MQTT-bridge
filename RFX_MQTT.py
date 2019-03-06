@@ -1,11 +1,8 @@
 import json
 import logging
-import sys
-
 import paho.mqtt.client as mqtt
 from RFXtrx import PySerialTransport, SensorEvent, ControlEvent, StatusEvent
 from settings import *
-
 
 loglevel = logging.getLevelName(LOGLEVEL)
 logging.basicConfig(level=loglevel, filename="RFXlog.log")
@@ -18,8 +15,8 @@ def on_connect(client, userdata, flags, rc):
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
     client.subscribe(MQTT_PREFIX + "/#")
-    mqtt_topic = MQTT_PREFIX + "/status"
-    mqtt_client.publish(mqtt_topic, "Online!")
+    connect_topic = MQTT_PREFIX + "/status"
+    mqtt_client.publish(connect_topic, "Online!")
 
 
 # The callback for when a PUBLISH message is received from the server.
@@ -42,6 +39,13 @@ mqtt_client.connect(MQTT_HOST, MQTT_PORT, 60)  # Connect the MQTT Client
 # manual interface.
 mqtt_client.loop_start()
 
+
+def id_to_name(id_string):
+    if id_string in CONVERTDICT.keys():
+        return CONVERTDICT[id_string]
+    return id_string
+
+
 while True:
     event = transport.receive_blocking()
 
@@ -50,19 +54,18 @@ while True:
 
     logging.debug(event)
     if isinstance(event, SensorEvent):
-        topic = MQTT_PREFIX + "/sensor/" + event.device.id_string
+        mqtt_topic = MQTT_PREFIX + "/sensor/" + id_to_name(event.device.id_string)
         json_payload = json.dumps(event.values)
-        logging.info(topic + ": " + json_payload)
-        mqtt_client.publish(topic, json_payload)
+        logging.info(mqtt_topic + ": " + json_payload)
+        mqtt_client.publish(mqtt_topic, json_payload)
 
     if isinstance(event, ControlEvent):
-        mqtt_topic = MQTT_PREFIX + "/control/" + event.device.id_string
+        mqtt_topic = MQTT_PREFIX + "/control/" + id_to_name(event.device.id_string)
         json_payload = json.dumps(event.values)
-        logging.info(topic + ": " + json_payload)
+        logging.info(mqtt_topic + ": " + json_payload)
         mqtt_client.publish(mqtt_topic, json_payload)
 
     if isinstance(event, StatusEvent):
         mqtt_topic = MQTT_PREFIX + "/status"
         logging.error("Statusevent: " + str(event))
         mqtt_client.publish(mqtt_topic, "StatusEvent received, cannot handle: " + str(event))
-
