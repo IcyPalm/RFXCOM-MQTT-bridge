@@ -56,7 +56,7 @@ while True:
     if isinstance(event, SensorEvent):
         mqtt_topic = MQTT_PREFIX + "/sensor/" + id_to_name(event.device.id_string)
         json_payload = json.dumps(event.values)
-        logging.info(mqtt_topic + ": " + json_payload)
+        logging.debug(mqtt_topic + ": " + json_payload)
         mqtt_client.publish(mqtt_topic, json_payload)
 
     if isinstance(event, ControlEvent):
